@@ -8,7 +8,8 @@ def sim_matrix(signal, sr):
 
 def main():
     # TEMP: create and save a similarity matrix
-    signal, sr = librosa.load('audio/call_me_maybe.mp3')
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
+    
     # Only use an 8th of the song for testing
     matrix = sim_matrix(signal[:len(signal) / 8], sr)
 
