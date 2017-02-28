@@ -72,7 +72,7 @@ def beat_sync_sim_matrix(signal, sr, hop_len, aggregator):
 
 def test_sim_matrix():
     # Create and save a similarity matrix
-    signal, sr = librosa.load('audio/call_me_maybe.mp3')
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
     # Only use an 8th of the song for testing
     matrix = sim_matrix(signal[:len(signal) / 8], sr)
 
@@ -82,7 +82,7 @@ def test_sim_matrix():
 
 def test_beat_sync_sim_matrix():
     # Create and save a beat syncrhonous similarity matrix
-    signal, sr = librosa.load('audio/call_me_maybe.mp3')
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
     # Only use an 8th of the song for testing
     matrix = beat_sync_sim_matrix(signal[:len(signal) / 8], sr, 1024, np.median)
 
