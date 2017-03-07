@@ -49,7 +49,7 @@ def beat_sync_features(feature_vectors, beats, aggregator = np.median, display =
 
 def sim_matrix(signal, sr):
     mfcc = librosa.feature.mfcc(y=signal, sr=sr)
-    return librosa.segment.recurrence_matrix(mfcc)
+    return librosa.segment.recurrence_matrix(mfcc, mode='distance')
 
 def beat_sync_sim_matrix(signal, sr, hop_len, aggregator):
     """Create a beat synchronous similarity matrix.
@@ -64,11 +64,11 @@ def beat_sync_sim_matrix(signal, sr, hop_len, aggregator):
     Output:
     numpy array, similarity matrix
     """
-    chroma = librosa.feature.chroma_stft(signal, sr=sr)
+    mfcc = librosa.feature.mfcc(y=signal, sr=sr)
     beats = beat_track(signal, sr, hop_len)
 
-    bsf = beat_sync_features(np.transpose(chroma), beats, aggregator, display=False)
-    return librosa.segment.recurrence_matrix(bsf)
+    bsf = beat_sync_features(np.transpose(mfcc), beats, aggregator, display=False)
+    return librosa.segment.recurrence_matrix(bsf, mode='distance')
 
 def test_sim_matrix():
     # Create and save a similarity matrix
