@@ -93,24 +93,34 @@ def cost(features):
 
 def main():
     signal, sr = librosa.load('audio/toy.wav')
-    signal = signal[:len(signal) / 2]
+    signal = signal[:len(signal) / 2] # Half length for testing
 
     mfcc = librosa.feature.mfcc(y=signal, sr=sr) 
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=1024)
 
     bsf = beat_sync_features(mfcc, beats, np.median, display=False)
+    assert beats.size == bsf.shape[1]
 
-    alpha = 1.3
+    alpha = 1.3 # Value from paper for timbre
     features = np.transpose(bsf)
 
     DG = nx.DiGraph()
+
+    # Beat frames are nodes
     DG.add_nodes_from(range(len(features)))
-    for i in range(len(features) - 2):
+    assert len(DG.nodes()) == beats.size
+
+    # Add edges
+    for i in range(len(features) - 2):  # - 2 to account for j being i + 1 and
+                                        # we add edges between i and j + 1 (aka i and i + 2)
         for j in range(i + 1, len(features) - 1):
             if j - i == 1:
+                # librosa's recurrance matrix can't calculate similarity for one feature vector
+                # But we know self similarity is 1
                 cost_value = alpha + 1
             else:
                 cost_value = alpha + cost(np.transpose(features[i:j]))
+
             DG.add_edge(i, j + 1, weight=cost_value)
 
     path = nx.shortest_path(DG, source=0, target=(len(features) - 1)) # List of beat frames
