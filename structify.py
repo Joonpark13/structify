@@ -126,10 +126,19 @@ def test_beat_sync_sim_matrix():
     librosa.display.specshow(matrix)
     plt.savefig('temp.png')
 
-def cost(i, j, features):
-    features_list = np.transpose(features)[i:j]
+def cost(features):
+    features_list = np.transpose(features)
     sim = librosa.segment.recurrence_matrix(np.transpose(features_list), mode='distance')
-    return (1.0 / (j - i + 1)) * np.sum(sim) / 2
+    return (1.0 / len(features_list)) * np.sum(sim) / 2
+
+def split_cost(K, alpha, features):
+    features_list = np.transpose(features)
+    segments = np.array_split(features_list, K)
+
+    cost_sum = 0
+    for segment in segments:
+        cost_sum += alpha + cost(np.transpose(segment))
+    return cost_sum
 
 def main():
     signal, sr = librosa.load('audio/call_me_maybe.wav')
@@ -141,7 +150,7 @@ def main():
 
     bsf = beat_sync_features(mfcc, beats, np.median, display=False)
 
-    print cost(0, 5, bsf)
+    print split_cost(4, 1.3, bsf)
 
 if __name__ == "__main__":
     main()
