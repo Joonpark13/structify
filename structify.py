@@ -84,49 +84,6 @@ def beat_sync_features_alt(feature_vectors, beats, aggregator=np.median, display
         
     return beat_synced_features 
 
-def sim_matrix(signal, sr):
-    mfcc = librosa.feature.mfcc(y=signal, sr=sr)
-    return librosa.segment.recurrence_matrix(mfcc, mode='distance')
-
-def beat_sync_sim_matrix(signal, sr, hop_len, aggregator):
-    """Create a beat synchronous similarity matrix.
-    
-    Keyword arguments:
-    signal -- numpy array, audio signal
-    sr -- int, sample rate
-    hop_len -- int, hop length
-    aggregator -- np.mean, np.median, np.max, or np.sum, aggregator function
-        used for creating beat sync features
-
-    Output:
-    numpy array, similarity matrix
-    """
-    mfcc = librosa.feature.mfcc(y=signal, sr=sr)
-    beats = beat_track(signal, sr, hop_len)
-
-    bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
-    return librosa.segment.recurrence_matrix(bsf, mode='distance')
-
-def test_sim_matrix():
-    # Create and save a similarity matrix
-    signal, sr = librosa.load('audio/call_me_maybe.wav')
-    # Only use an 8th of the song for testing
-    matrix = sim_matrix(signal[:len(signal) / 8], sr)
-
-    plt.figure()
-    librosa.display.specshow(matrix)
-    plt.savefig('temp.png')
-
-def test_beat_sync_sim_matrix():
-    # Create and save a beat syncrhonous similarity matrix
-    signal, sr = librosa.load('audio/call_me_maybe.wav')
-    # Only use an 8th of the song for testing
-    matrix = beat_sync_sim_matrix(signal[:len(signal) / 8], sr, 1024, np.median)
-
-    plt.figure()
-    librosa.display.specshow(matrix)
-    plt.savefig('temp.png')
-
 def cost(features):
     features_list = np.transpose(features)
     sim = librosa.segment.recurrence_matrix(features, mode='distance')
