@@ -29,9 +29,10 @@ def beat_sync_features(feature_vectors, beats, aggregator = np.median, display =
             and B is the number of beats. Each column of this matrix represents a beat synchronous feature
             vector.
     """
-    sm = np.empty((beats.size, feature_vectors.shape[1]))
+    transposed = np.transpose(feature_vectors)
+    sm = np.empty((beats.size, transposed.shape[1]))
     
-    split_vectors = np.split(feature_vectors, beats)
+    split_vectors = np.split(transposed, beats)
     for ind, split_vector in enumerate(split_vectors[1:]):
         # Don't include first split because audio's 0:00 doesn't necessarily mean first beat starts then
         sm[ind] = aggregator(split_vector, axis=0)
@@ -46,6 +47,41 @@ def beat_sync_features(feature_vectors, beats, aggregator = np.median, display =
         plt.show()
     
     return sm
+
+def beat_sync_features_alt(feature_vectors, beats, aggregator=np.median, display=True, sr=None, hop_length=None):
+    """
+        input:
+            feature_vectors: a numpy ndarray MxN, where M is the number of features in each vector and 
+            N is the length of the sequence.
+            beats: frames given by the beat tracker
+            aggregator: how to summarize all the frames within a beat (e.g. np.median, np.mean). Defaults to np.median.
+            display: if True, displays the beat synchronous features.
+        output:
+            beat_synced_features: a numpy ndarray MxB, where M is the number of features in each vector
+            and B is the number of beats. Each column of this matrix represents a beat synchronous feature
+            vector.
+    """
+    
+    # Find boundaries of the samples that make up each beat. Calculate halfway mark between each beat, which will
+    # represent the boundaries of all beats except the first and the last. Prepend 0, and append the last sample,
+    # so that we then have boundaries for every beat.
+    beat_boundaries = [0] + [(beats[i] + beats[i+1]) / 2 for i in range(len(beats) - 1)] + [beats[-1]]
+    
+    beat_synced_features = np.zeros((feature_vectors.shape[0], beats.size))
+    
+    # Aggregate features based on indices of beat_boundaries
+    for i, start in enumerate(beat_boundaries[:-1]):
+        end = beat_boundaries[i + 1]
+        beat_synced_features[:, i] = aggregator(feature_vectors[:, start:end], axis = 1)
+    
+    # Modified version of plotting, from start of #1
+    if display:
+        plt.figure(figsize=(20, 4))
+        librosa.display.specshow(beat_synced_features, sr = sr, hop_length = hop_length,
+                                 y_axis = "chroma", x_axis = "frames")
+        plt.xlabel("Beat Number")
+        
+    return beat_synced_features 
 
 def sim_matrix(signal, sr):
     mfcc = librosa.feature.mfcc(y=signal, sr=sr)
@@ -67,7 +103,7 @@ def beat_sync_sim_matrix(signal, sr, hop_len, aggregator):
     mfcc = librosa.feature.mfcc(y=signal, sr=sr)
     beats = beat_track(signal, sr, hop_len)
 
-    bsf = beat_sync_features(np.transpose(mfcc), beats, aggregator, display=False)
+    bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     return librosa.segment.recurrence_matrix(bsf, mode='distance')
 
 def test_sim_matrix():
@@ -90,8 +126,22 @@ def test_beat_sync_sim_matrix():
     librosa.display.specshow(matrix)
     plt.savefig('temp.png')
 
+def cost(i, j, features):
+    features_list = np.transpose(features)[i:j]
+    sim = librosa.segment.recurrence_matrix(np.transpose(features_list), mode='distance')
+    return (1.0 / (j - i + 1)) * np.sum(sim) / 2
+
 def main():
-    test_beat_sync_sim_matrix()
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
+    signal = signal[:len(signal) / 2]
+
+    mfcc = librosa.feature.mfcc(y=signal, sr=sr)
+
+    tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=1024)
+
+    bsf = beat_sync_features(mfcc, beats, np.median, display=False)
+
+    print cost(0, 5, bsf)
 
 if __name__ == "__main__":
     main()
