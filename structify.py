@@ -2,6 +2,7 @@ import librosa
 import librosa.display # Must separately be imported
 import matplotlib.pyplot as plt
 import numpy as np
+import networkx as nx
 
 def beat_track(music, sr, hop_length):
     """
@@ -128,29 +129,33 @@ def test_beat_sync_sim_matrix():
 
 def cost(features):
     features_list = np.transpose(features)
-    sim = librosa.segment.recurrence_matrix(np.transpose(features_list), mode='distance')
-    return (1.0 / len(features_list)) * np.sum(sim) / 2
-
-def split_cost(K, alpha, features):
-    features_list = np.transpose(features)
-    segments = np.array_split(features_list, K)
-
-    cost_sum = 0
-    for segment in segments:
-        cost_sum += alpha + cost(np.transpose(segment))
-    return cost_sum
+    sim = librosa.segment.recurrence_matrix(features, mode='distance')
+    sim = 1.0 - (sim / np.amax(sim))
+    return (1.0 / len(features_list)) * np.sum(sim) / 2.0
 
 def main():
     signal, sr = librosa.load('audio/call_me_maybe.wav')
-    signal = signal[:len(signal) / 2]
 
-    mfcc = librosa.feature.mfcc(y=signal, sr=sr)
-
+    mfcc = librosa.feature.mfcc(y=signal, sr=sr) 
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=1024)
 
     bsf = beat_sync_features(mfcc, beats, np.median, display=False)
 
-    print split_cost(4, 1.3, bsf)
+    alpha = 1.3
+    features = np.transpose(bsf)
+
+    DG = nx.DiGraph()
+    DG.add_nodes_from(range(len(features)))
+    for i in range(len(features) - 2):
+        for j in range(i + 1, len(features) - 1):
+            if j - i == 1:
+                cost_value = alpha + 1
+            else:
+                cost_value = alpha + cost(np.transpose(features[i:j]))
+            DG.add_edge(i, j + 1, weight=cost_value)
+
+    path = nx.shortest_path(DG, source=0, target=len(features) - 1) # List of beat frames
+    print librosa.frames_to_time(path, sr=sr)
 
 if __name__ == "__main__":
     main()
