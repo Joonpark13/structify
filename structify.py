@@ -87,21 +87,15 @@ def beat_sync_features_alt(feature_vectors, beats, aggregator=np.median, display
 def cost(features):
     features_list = np.transpose(features)
     sim = librosa.segment.recurrence_matrix(features, mode='distance')
-    max_val = np.amax(sim)
-    sim = 1.0 - (sim / max_val)
-    return (1.0 / len(features_list)) * (np.sum(sim) - sim.shape[0]) / 2.0
+    return (1.0 / len(features_list)) * (np.sum(sim) / 2.0)
 
-def main():
-    signal, sr = librosa.load('audio/toy.wav')
-    signal = signal[:len(signal) / 2] # Half length for testing
-
+def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     mfcc = librosa.feature.mfcc(y=signal, sr=sr) 
-    tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=1024)
+    tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
 
-    bsf = beat_sync_features(mfcc, beats, np.median, display=False)
+    bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
 
-    alpha = 1.3 # Value from paper for timbre
     features = np.transpose(bsf)
 
     DG = nx.DiGraph()
@@ -115,16 +109,26 @@ def main():
                                         # we add edges between i and j + 1 (aka i and i + 2)
         for j in range(i + 1, len(features) - 1):
             if j - i == 1:
-                # librosa's recurrance matrix can't calculate similarity for one feature vector
-                # But we know self similarity is 1
-                cost_value = alpha + 1
+                # librosa's recurrance matrix can't calculate distance for one feature vector
+                # But we know distance to itself is 0
+                cost_value = alpha
             else:
                 cost_value = alpha + cost(np.transpose(features[i:j]))
 
             DG.add_edge(i, j + 1, weight=cost_value)
 
-    path = nx.shortest_path(DG, source=0, target=(len(features) - 1)) # List of beat frames
-    print librosa.frames_to_time(path, sr=sr, hop_length=1024)
+    path = nx.dijkstra_path(DG, 0, len(features) - 1)
+
+    # Convert beat frames to time
+    beat_frames = []
+    for index in path:
+        beat_frames.append(beats[index])
+    return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
+
+def main():
+    signal, sr = librosa.load('audio/toy.wav')
+    signal = signal[:len(signal) / 2] # Half length for testing
+    print segment(signal, sr, 1024, 1.3)
 
 if __name__ == "__main__":
     main()
