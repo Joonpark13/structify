@@ -1,19 +1,9 @@
-
-# coding: utf-8
-
-# # Structify
-
-# In[15]:
-
 import librosa
 import librosa.display # Must separately be imported
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 import scipy as sp
-
-
-# In[3]:
 
 def beat_track(music, sr, hop_length):
     """
@@ -28,8 +18,6 @@ def beat_track(music, sr, hop_length):
     tempo, beats = librosa.beat.beat_track(music, sr=sr, hop_length=hop_length)
     return beats
 
-
-# In[67]:
 
 def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=True, sr=None, hop_length=None):
     """
@@ -69,15 +57,11 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Tru
     return beat_synced_features
 
 
-# In[52]:
-
 def cost(features, sim):
     features_list = np.transpose(features)
     #sim = librosa.segment.recurrence_matrix(features, mode='distance')
     return (1.0 / len(features_list)) * (np.sum(sim) / 2.0)
 
-
-# In[59]:
 
 def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = True):
     """
@@ -109,8 +93,6 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosi
 
     return sim_matrix
 
-
-# In[66]:
 
 def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     mfcc = librosa.feature.mfcc(signal, sr)
@@ -153,12 +135,11 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
 
-# In[68]:
-
 def main():
-    signal, sr = librosa.load('audio/call_me_maybe.wav')
-    signal = signal[:len(signal) / 4] # Half length for testing
+    signal, sr = librosa.load('audio/toy2.wav')
+    signal = signal[:len(signal) / 2] # Half length for testing
     print segment(signal, sr, 1024, 5)
 
-main()
+if __name__ == "__main__":
+    main()
 
