@@ -150,10 +150,11 @@ def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
     current_timestamps = correct_timestamps
     eval = 0.
     for i in range(len(result_timestamps)):
-        index, diff = best_fit(current_timestamps, result_timestamps[i])
-        current_timestamps = np.delete(current_timestamps, index)
-        if diff < threshold:
-            eval += 1
+        if (len(current_timestamps)>0):
+            index, diff = best_fit(current_timestamps, result_timestamps[i])
+            current_timestamps = np.delete(current_timestamps, index)
+            if diff < threshold:
+                eval += 1
     return eval / len(correct_timestamps)
 
 def best_fit(correct_timestamps, sample_timestamp):
@@ -172,7 +173,7 @@ def best_fit(correct_timestamps, sample_timestamp):
 def main():
     correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
     signal, sr = librosa.load('audio/call_me_maybe.wav')
-    tested_alphas, evaluation, best_alpha, best_timestamps = auto_test_alpha(signal, sr, correct_timestamps, 1.2,1.4,3)
+    tested_alphas, evaluation, best_alpha, best_timestamps = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 1.4, 3)
     num_right = evaluation*len(correct_timestamps)
     print 'The best alpha value out of ', tested_alphas, ' is ', best_alpha
     print 'It gives a performance evaluation of ', evaluation, ', correctly finding ', num_right, ' out of ', len(correct_timestamps), ' timestamps'
