@@ -57,10 +57,8 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Tru
     return beat_synced_features
 
 
-def cost(features, sim):
-    features_list = np.transpose(features)
-    #sim = librosa.segment.recurrence_matrix(features, mode='distance')
-    return (1.0 / len(features_list)) * (np.sum(sim) / 2.0)
+def cost(i, j, sim):
+    return (1.0 / sim.shape[0]) * (np.sum(sim[i:j, i:j]) / 2.0)
 
 
 def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = True):
@@ -83,8 +81,8 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosi
     sim_matrix = sp.spatial.distance.cdist(feature_vectors.T, feature_vectors.T, distance_metric)
     
     # Normalize by max distance, then take S = 1 - D
-    max_distance = np.amax(sim_matrix)
-    sim_matrix /= max_distance
+    # max_distance = np.amax(sim_matrix)
+    # sim_matrix /= max_distance
     
     if display:
         plt.imshow(sim_matrix)
@@ -97,36 +95,35 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosi
 def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     mfcc = librosa.feature.mfcc(signal, sr)
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
-    
+        
     bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
     
     # Compute (and show for testing) similarity matrix)
     sim = sim_matrix(bsf, sr, hop_len, "cityblock")
+    print np.amax(sim)
     plt.show()
 
-    features = np.transpose(bsf)
-    
     DG = nx.DiGraph()
 
     # Beat frames are nodes
-    DG.add_nodes_from(range(len(features)))
+    DG.add_nodes_from(range(sim.shape[0]))
     assert len(DG.nodes()) == beats.size
 
     # Add edges
-    for i in range(len(features) - 2):  # - 2 to account for j being i + 1 and
+    for i in range(sim.shape[0] - 2):  # - 2 to account for j being i + 1 and
                                         # we add edges between i and j + 1 (aka i and i + 2)
-        for j in range(i + 1, len(features) - 1):
+        for j in range(i + 1, sim.shape[0] - 1):
             if j - i == 1:
                 # librosa's recurrance matrix can't calculate distance for one feature vector
                 # But we know distance to itself is 0
                 cost_value = alpha
             else:
-                cost_value = alpha + cost(np.transpose(features[i:j]), sim)
+                cost_value = alpha + cost(i, j, sim)
 
             DG.add_edge(i, j + 1, weight=cost_value)
 
-    path = nx.dijkstra_path(DG, 0, len(features) - 1)
+    path = nx.dijkstra_path(DG, 0, sim.shape[0] - 1)
 
     # Convert beat frames to time
     beat_frames = []
@@ -137,8 +134,8 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
 
 def main():
     signal, sr = librosa.load('audio/toy2.wav')
-    signal = signal[:len(signal) / 2] # Half length for testing
-    print segment(signal, sr, 1024, 5)
+    # signal = signal[:len(signal) / 2] # Half length for testing
+    print segment(signal, sr, 1024, 700.0)
 
 if __name__ == "__main__":
     main()
