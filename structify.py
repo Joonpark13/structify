@@ -73,23 +73,23 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosi
         Output:
             if display is True, plot the similarity matrix. Along the x and y axis of the similarity matrix, 
             the ticks should be in seconds not in samples. 
-            returns sim_matrix - an NxN matrix with the pairwise distance between every feature vector.
+            returns sim - an NxN matrix with the pairwise distance between every feature vector.
                                  0 is no distance, 1 is max distance
     """
     
     # Compute distance matrix
-    sim_matrix = sp.spatial.distance.cdist(feature_vectors.T, feature_vectors.T, distance_metric)
+    sim = sp.spatial.distance.cdist(feature_vectors.T, feature_vectors.T, distance_metric)
     
-    # Normalize by max distance, then take S = 1 - D
-    # max_distance = np.amax(sim_matrix)
-    # sim_matrix /= max_distance
+    # Normalize by max distance
+    max_distance = np.amax(sim)
+    sim /= max_distance
     
     if display:
-        plt.imshow(sim_matrix)
+        plt.imshow(sim)
         plt.colorbar()
         plt.title('Similarity Matrix - {0}'.format(distance_metric))
 
-    return sim_matrix
+    return sim
 
 
 def segment(signal, sr, hop_len, alpha, aggregator=np.median):
@@ -101,7 +101,6 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     
     # Compute (and show for testing) similarity matrix)
     sim = sim_matrix(bsf, sr, hop_len, "cityblock")
-    print np.amax(sim)
     plt.show()
 
     DG = nx.DiGraph()
@@ -134,7 +133,6 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
 
 def main():
     signal, sr = librosa.load('audio/toy2.wav')
-    # signal = signal[:len(signal) / 2] # Half length for testing
     print segment(signal, sr, 1024, 700.0)
 
 if __name__ == "__main__":
