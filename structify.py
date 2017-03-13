@@ -19,7 +19,7 @@ def beat_track(music, sr, hop_length):
     return beats
 
 
-def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=True, sr=None, hop_length=None):
+def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=False, sr=None, hop_length=None):
     """
         input:
             feature_vectors: a numpy ndarray MxN, where M is the number of features in each vector and 
@@ -36,7 +36,7 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Tru
     # Find boundaries of the samples that make up each beat. Calculate halfway mark between each beat, which will
     # represent the boundaries of all beats except the first and the last. Prepend 0, and append the last sample,
     # so that we then have boundaries for every beat.
-    beat_boundaries = [0] + [(beats[i] + beats[i+1]) / 2 for i in range(len(beats) - 1)] + [beats[-1]]
+    beat_boundaries = [0] + beats # [(beats[i] + beats[i+1]) / 2 for i in range(len(beats) - 1)] + [beats[-1]]
     
     beat_synced_features = np.zeros((feature_vectors.shape[0], beats.size))
     
@@ -61,7 +61,7 @@ def cost(i, j, sim):
     return (1.0 / sim.shape[0]) * (np.sum(sim[i:j, i:j]) / 2.0)
 
 
-def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = True):
+def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = False):
     """
         Input:
             feature_vectors - a numpy ndarray MxN, where M is the number of features in each vector and 
@@ -130,10 +130,54 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
         beat_frames.append(beats[index])
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
+def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0):
+    # threshold refers to the max difference (in absolute value) a returned timestamp can have from our estimated correct timestamp to be considered accurate
+    best_alpha = start_alpha
+    best_eval = 0
+    test_alphas = np.linspace(start_alpha, end_alpha, num=num_samples)
+
+    for alpha in test_alphas:
+        result_timestamps = segment(signal, sr, 1024, alpha)
+        eval = evaluate(correct_timestamps, result_timestamps, threshold)
+        if (eval > best_eval):
+            best_eval = eval
+            best_alpha = alpha
+            best_timestamps = result_timestamps
+
+    return test_alphas, best_eval, best_alpha, best_timestamps
+
+def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
+    current_timestamps = correct_timestamps
+    eval = 0.
+    for i in range(len(result_timestamps)):
+        index, diff = best_fit(current_timestamps, result_timestamps[i])
+        current_timestamps = np.delete(current_timestamps, index)
+        if diff < threshold:
+            eval += 1
+    return eval / len(correct_timestamps)
+
+def best_fit(correct_timestamps, sample_timestamp):
+    min_diff = np.inf
+    for i in range(len(correct_timestamps)):
+        diff = np.abs(correct_timestamps[i] - sample_timestamp)
+        if diff < min_diff:
+            min_diff = diff
+            index = i
+            best_diff = diff
+    return index, best_diff
+
+# call me maybe approximate:
+# .65, 3, 27, 60, 87, 136, 151, 183
 
 def main():
-    signal, sr = librosa.load('audio/toy2.wav')
-    print segment(signal, sr, 1024, 700.0)
+    correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
+    tested_alphas, evaluation, best_alpha, best_timestamps = auto_test_alpha(signal, sr, correct_timestamps, 1.2,1.4,3)
+    num_right = evaluation*len(correct_timestamps)
+    print 'The best alpha value out of ', tested_alphas, ' is ', best_alpha
+    print 'It gives a performance evaluation of ', evaluation, ', correctly finding ', num_right, ' out of ', len(correct_timestamps), ' timestamps'
+    print 'Our labels: ', correct_timestamps
+    print 'Best returned labels: ', best_timestamps
 
 if __name__ == "__main__":
     main()
