@@ -1,8 +1,19 @@
+
+# coding: utf-8
+
+# # Structify
+
+# In[15]:
+
 import librosa
 import librosa.display # Must separately be imported
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
+import scipy as sp
+
+
+# In[3]:
 
 def beat_track(music, sr, hop_length):
     """
@@ -17,39 +28,10 @@ def beat_track(music, sr, hop_length):
     tempo, beats = librosa.beat.beat_track(music, sr=sr, hop_length=hop_length)
     return beats
 
-def beat_sync_features(feature_vectors, beats, aggregator = np.median, display = True):
-    """
-        input:
-            feature_vectors: a numpy ndarray MxN, where M is the number of features in each vector and 
-            N is the length of the sequence.
-            beats: frames given by the beat tracker
-            aggregator: how to summarize all the frames within a beat (e.g. np.median, np.mean). Defaults to np.median.
-            display: if True, displays the beat synchronous features.
-        output:
-            beat_synced_features: a numpy ndarray MxB, where M is the number of features in each vector
-            and B is the number of beats. Each column of this matrix represents a beat synchronous feature
-            vector.
-    """
-    transposed = np.transpose(feature_vectors)
-    sm = np.empty((beats.size, transposed.shape[1]))
-    
-    split_vectors = np.split(transposed, beats)
-    for ind, split_vector in enumerate(split_vectors[1:]):
-        # Don't include first split because audio's 0:00 doesn't necessarily mean first beat starts then
-        sm[ind] = aggregator(split_vector, axis=0)
-        
-    sm = np.transpose(sm)
-        
-    if display:
-        plt.pcolor(sm)
-        plt.xlabel('Beat frames')
-        plt.ylabel('Pitch Class')
-        plt.title('Beat Synched Features')
-        plt.show()
-    
-    return sm
 
-def beat_sync_features_alt(feature_vectors, beats, aggregator=np.median, display=True, sr=None, hop_length=None):
+# In[67]:
+
+def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=True, sr=None, hop_length=None):
     """
         input:
             feature_vectors: a numpy ndarray MxN, where M is the number of features in each vector and 
@@ -77,27 +59,72 @@ def beat_sync_features_alt(feature_vectors, beats, aggregator=np.median, display
     
     # Modified version of plotting, from start of #1
     if display:
-        plt.figure(figsize=(20, 4))
+        plt.figure(figsize=(10, 4))
         librosa.display.specshow(beat_synced_features, sr = sr, hop_length = hop_length,
-                                 y_axis = "chroma", x_axis = "frames")
+                                 x_axis = "frames")
         plt.xlabel("Beat Number")
+        plt.ylabel("Some Feature idk")
+        plt.show()
         
-    return beat_synced_features 
+    return beat_synced_features
 
-def cost(features):
+
+# In[52]:
+
+def cost(features, sim):
     features_list = np.transpose(features)
-    sim = librosa.segment.recurrence_matrix(features, mode='distance')
+    #sim = librosa.segment.recurrence_matrix(features, mode='distance')
     return (1.0 / len(features_list)) * (np.sum(sim) / 2.0)
 
-def segment(signal, sr, hop_len, alpha, aggregator=np.median):
-    mfcc = librosa.feature.mfcc(y=signal, sr=sr) 
-    tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
 
+# In[59]:
+
+def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = True):
+    """
+        Input:
+            feature_vectors - a numpy ndarray MxN, where M is the number of features in each vector and 
+            N is the length of the sequence.
+            sample_rate - sample rate of the original audio
+            hop_length - the length of the hop used in the representation
+            distance_metric - which distance metric to use to compute similarity. Defaults to cosine.
+            display - whether or not to display the similarity matrix after computing it. Defaults to True.
+        Output:
+            if display is True, plot the similarity matrix. Along the x and y axis of the similarity matrix, 
+            the ticks should be in seconds not in samples. 
+            returns sim_matrix - an NxN matrix with the pairwise distance between every feature vector.
+                                 0 is no distance, 1 is max distance
+    """
+    
+    # Compute distance matrix
+    sim_matrix = sp.spatial.distance.cdist(feature_vectors.T, feature_vectors.T, distance_metric)
+    
+    # Normalize by max distance, then take S = 1 - D
+    max_distance = np.amax(sim_matrix)
+    sim_matrix /= max_distance
+    
+    if display:
+        plt.imshow(sim_matrix)
+        plt.colorbar()
+        plt.title('Similarity Matrix - {0}'.format(distance_metric))
+
+    return sim_matrix
+
+
+# In[66]:
+
+def segment(signal, sr, hop_len, alpha, aggregator=np.median):
+    mfcc = librosa.feature.mfcc(signal, sr)
+    tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
+    
     bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
+    
+    # Compute (and show for testing) similarity matrix)
+    sim = sim_matrix(bsf, sr, hop_len, "cityblock")
+    plt.show()
 
     features = np.transpose(bsf)
-
+    
     DG = nx.DiGraph()
 
     # Beat frames are nodes
@@ -113,7 +140,7 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
                 # But we know distance to itself is 0
                 cost_value = alpha
             else:
-                cost_value = alpha + cost(np.transpose(features[i:j]))
+                cost_value = alpha + cost(np.transpose(features[i:j]), sim)
 
             DG.add_edge(i, j + 1, weight=cost_value)
 
@@ -125,11 +152,13 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
         beat_frames.append(beats[index])
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
-def main():
-    signal, sr = librosa.load('audio/toy.wav')
-    signal = signal[:len(signal) / 2] # Half length for testing
-    print segment(signal, sr, 1024, 1.3)
 
-if __name__ == "__main__":
-    main()
+# In[68]:
+
+def main():
+    signal, sr = librosa.load('audio/call_me_maybe.wav')
+    signal = signal[:len(signal) / 4] # Half length for testing
+    print segment(signal, sr, 1024, 5)
+
+main()
 
