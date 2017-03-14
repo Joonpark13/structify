@@ -134,28 +134,41 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
     # threshold refers to the max difference (in absolute value) a returned timestamp can have from our estimated correct timestamp to be considered accurate
     best_alpha = start_alpha
     best_eval = 0
+    best_hits = 0
+    best_misses = 0
     test_alphas = np.linspace(start_alpha, end_alpha, num=num_samples)
 
     for alpha in test_alphas:
         result_timestamps = segment(signal, sr, 1024, alpha)
-        eval = evaluate(correct_timestamps, result_timestamps, threshold)
+        eval, hits, misses = evaluate(correct_timestamps, result_timestamps, threshold)
         if (eval > best_eval):
             best_eval = eval
             best_alpha = alpha
+            best_hits = hits
+            best_misses = misses
             best_timestamps = result_timestamps
 
-    return test_alphas, best_eval, best_alpha, best_timestamps
+    return test_alphas, best_eval, best_alpha, best_timestamps, best_hits, best_misses
 
 def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
     current_timestamps = correct_timestamps
     eval = 0.
-    for i in range(len(result_timestamps)):
-        if (len(current_timestamps)>0):
-            index, diff = best_fit(current_timestamps, result_timestamps[i])
+    hits = 0
+    misses = 0
+    i = 0
+    while ((i < len(result_timestamps)) and (len(current_timestamps) > 0)):
+        index, diff = best_fit(current_timestamps, result_timestamps[i])
+            
+        if diff < threshold:
+            eval += 1
+            hits += 1
             current_timestamps = np.delete(current_timestamps, index)
-            if diff < threshold:
-                eval += 1
-    return eval / len(correct_timestamps)
+        else:
+            eval -= 0.5
+            misses += 1
+
+        i += 1
+    return max((eval / len(correct_timestamps)), 0), hits, misses
 
 def best_fit(correct_timestamps, sample_timestamp):
     min_diff = np.inf
@@ -173,12 +186,11 @@ def best_fit(correct_timestamps, sample_timestamp):
 def main():
     correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
     signal, sr = librosa.load('audio/call_me_maybe.wav')
-    tested_alphas, evaluation, best_alpha, best_timestamps = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 1.4, 3)
-    num_right = evaluation*len(correct_timestamps)
+    tested_alphas, evaluation, best_alpha, best_timestamps, best_hits, best_misses = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
     print 'The best alpha value out of ', tested_alphas, ' is ', best_alpha
-    print 'It gives a performance evaluation of ', evaluation, ', correctly finding ', num_right, ' out of ', len(correct_timestamps), ' timestamps'
-    print 'Our labels: ', correct_timestamps
-    print 'Best returned labels: ', best_timestamps
+    print 'It gives a performance evaluation of ', evaluation, ', correctly finding ', best_hits, ' out of ', len(correct_timestamps), ' timestamps with ', best_misses, ' false positives'
+    print 'Our timestamps: ', correct_timestamps
+    print 'Best returned timestamps: ', best_timestamps
 
 if __name__ == "__main__":
     main()
