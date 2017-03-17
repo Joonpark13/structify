@@ -190,21 +190,25 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
         'best_misses': best_misses
     }
 
+def plot_segmented_signal(signal, sr, hop_len, segment_times, song_title):
+    times = librosa.samples_to_time(range(len(signal)), sr=sr)
+
+    plt.figure(figsize=(10, 4))
+
+    plt.plot(times, signal, color='b')
+    for timestamp in segment_times:
+        plt.axvline(timestamp, color='r')
+
+    plt.title(song_title)
+    plt.xlabel('Time (s)')
+    plt.savefig('segmented_signal.png')
+
 def main():
-    # call me maybe approximate:
-    # .65, 3, 27, 60, 87, 136, 151, 183
-    correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
-    signal, sr = librosa.load('audio/call_me_maybe.wav')
-    test_data = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
-    print 'The best alpha value out of {0} is {1}'.format(test_data['test_alphas'], test_data['best_alpha'])
-    print 'It gives a performance evaluation of {0}, correctly finding {1} out of {2} timestamps with {3} false positives'.format(
-        test_data['best_eval'],
-        test_data['best_hits'],
-        len(correct_timestamps),
-        test_data['best_misses']
-    )
-    print 'Our timestamps: {0}'.format(correct_timestamps)
-    print 'Best returned timestamps: {0}'.format(test_data['best_timestamps'])
+    signal, sr = librosa.load('audio/toy2.wav')
+    hop_len = 1024
+    alpha = 1.3
+    segments = segment(signal, sr, hop_len, alpha)
+    plot_segmented_signal(signal, sr, hop_len, segments, 'toy 2')
 
 if __name__ == "__main__":
     main()
