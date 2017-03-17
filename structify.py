@@ -130,6 +130,7 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='c
         beat_frames.append(beats[index])
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
+
 def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
     # threshold refers to the max difference (in absolute value seconds) a
     # returned timestamp can have from our estimated correct timestamp to be
@@ -158,6 +159,7 @@ def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
         i += 1
 
     return max((total / len(correct_timestamps)), 0), hits, misses
+
 
 def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0):
     # threshold refers to the max difference (in absolute value seconds) a
@@ -190,6 +192,7 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
         'best_misses': best_misses
     }
 
+
 def plot_segmented_signal(signal, sr, hop_len, segment_times, song_title):
     times = librosa.samples_to_time(range(len(signal)), sr=sr)
 
@@ -203,12 +206,16 @@ def plot_segmented_signal(signal, sr, hop_len, segment_times, song_title):
     plt.xlabel('Time (s)')
     plt.savefig('segmented_signal.png')
 
+
 def main():
-    signal, sr = librosa.load('audio/toy2.wav')
+    song = 'audio/call_me_maybe.wav'
+    signal, sr = librosa.load(song)
     hop_len = 1024
     alpha = 1.3
     segments = segment(signal, sr, hop_len, alpha)
-    plot_segmented_signal(signal, sr, hop_len, segments, 'toy 2')
+
+    song_title = song[6:-4]  # song begins with "audio/" and ends with ".wav"
+    plot_segmented_signal(signal, sr, hop_len, segments, song_title)
 
 if __name__ == "__main__":
     main()
