@@ -61,7 +61,7 @@ def cost(i, j, sim):
     return (1.0 / sim.shape[0]) * (np.sum(sim[i:j, i:j]) / 2.0)
 
 
-def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosine', display = False):
+def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='cityblock', display=False):
     """
         Input:
             feature_vectors - a numpy ndarray MxN, where M is the number of features in each vector and 
@@ -92,7 +92,7 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric = 'cosi
     return sim
 
 
-def segment(signal, sr, hop_len, alpha, aggregator=np.median):
+def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='cityblock'):
     mfcc = librosa.feature.mfcc(signal, sr)
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
         
@@ -100,7 +100,7 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
     assert beats.size == bsf.shape[1]
     
     # Compute (and show for testing) similarity matrix)
-    sim = sim_matrix(bsf, sr, hop_len, "cityblock")
+    sim = sim_matrix(bsf, sr, hop_len, distance_metric)
     plt.show()
 
     DG = nx.DiGraph()
@@ -190,10 +190,9 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
         'best_misses': best_misses
     }
 
-# call me maybe approximate:
-# .65, 3, 27, 60, 87, 136, 151, 183
-
 def main():
+    # call me maybe approximate:
+    # .65, 3, 27, 60, 87, 136, 151, 183
     correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
     signal, sr = librosa.load('audio/call_me_maybe.wav')
     test_data = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
