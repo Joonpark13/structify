@@ -25,35 +25,141 @@
 
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="abstract">
-
-                    <img class="structify-output-image-resize" src="{{ url_for('static', filename='call-me-maybe-timbregram.png') }}">
-                    <p class="figure-label">Figure 1</p>
-                    <p class="figure-text"></p>
-
-                    <img class="structify-output-image-resize" src="{{ url_for('static', filename='call-me-maybe-sim-matrix.png') }}">
-                    <p class="figure-label">Figure 2</p>
-                    <p class="figure-text"></p>
+                    <p>It is well-known that repetition is fundamental to music; it both gives music structure and allows humans to perceive this structure. In particular, pop songs often repeat the verse and chorus to create structure. Approaches to automatically and computationally analyzing this structure often involve detecting patterns in a self-similarity matrix of spectral features.</p>
+                    <p>We implement the work of Jensen 2007, in which a self-similarity matrix of timbre features was used to automatically segment music1.  A shortest path algorithm is implemented on a graph structure of potential segment boundaries, having weights be costs of segmentations.</p>
+                    <p>When using timbre features on a dataset of 10 pop songs, we obtained an F1 measure of 0.44, comparing the boundaries Structify identified to manually identified splits. Chroma and tempo features performed slightly worse, having F1 measures near 0.35. This is a promising result for automatic song structure analysis, as Structify was frequently able to identify the verse, chorus, or bridge of pop songs.</p>
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="music">
-                    <p>Ipsum</p>
+                    <p>Our analysis of music revolves around the self-similarity matrix, a graphical representation of sequences in a data series. To construct this, we transform a discrete audio time series into a sequence of feature vectors. Various methods are used to compute the feature vectors, including construction of chromgragrams, tempogram, and timbregrams. We tested all three, but ultimately use the timbregram due to its superior performance1 in the literature and our own testing.</p>
+                    <p>We compute a standard spectrogram as the concatenation of short-time Fourier transforms (STFTs). The frequency vectors for each frame are mapped into mel-space, yielding mel-frequency cepstral coefficients (MFCCs). The timbregram is then computed as the concatenation of the MFCC feature vectors.</p>
+                    <p>The pairwise distance between each feature vector in the timbregram is computed and stored in a beat-synced self-similarity matrix. Distances are computed using the cityblock norm, as preliminary testing showed this gave the best results. Finally, we aggregate features that belong to the same beat by taking their median, which reduces dimensionality, increases computational efficiency, and gives each feature vector more meaning.</p>
+
+                    <img class="structify-output-image-resize" src="{{ url_for('static', filename='call-me-maybe-timbregram.png') }}">
+                    <p class="figure-label">Figure 1.</p>
+                    <p class="figure-text">Timbregram for “Call Me Maybe” by Carly Rae Jespen</p>
+
+                    <img class="structify-output-image-resize" src="{{ url_for('static', filename='call-me-maybe-sim-matrix.png') }}">
+                    <p class="figure-label">Figure 2.</p>
+                    <p class="figure-text">Similarity matrix for “Call Me Maybe”.</p>
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="methods">
-
+                    <p>We implement the methods of Jensen 2007. We create a directed graph whose nodes are beats, or potential segment boundaries. An edge e(i, j) represents a possible segmentation from beat i to beat j, and its cost is defined as</p>
+                    <img class="structify-output-image-resize2" src="{{ url_for('static', filename='cost-function.png') }}">
+                    <p>which computes an average self-similarity of each beat in the segment to all other beats in the segment. The parameter α is a fixed value added to each cost, discouraging excessively short segments.</p>
+                    <p>After constructing the graph, we simply find the lowest-cost path from the first to the last beat. This can be done in O(N log N) time using standard pathfinding algorithms. The path with the least total cost is returned as a list of beats (segment boundaries), where each beat represents the start of a segmentation.</p>
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="results">
+                    <p>We tested Structify on a dataset of ten pop songs, chosen semi-randomly from a list of all-time most popular songs. In each case, we compared the boundaries identified to manually identified boundaries, obtained by group members listening to each song and noting transitions between sections. We define a segment boundary as correct if it is within two beats of an actual boundary, to account for difficulties in beat tracking and precise manual segmentation.</p>
+                    <p>We computed the proportion of actual boundaries that were identified (precision), the proportion of identified boundaries that were correct (recall), and the F1 measure from these. This was done for each type of feature vector (chroma, tempo, and mfcc features).</p>
+                    <p>Table 1 presents a detailed comparison of the F1 measures for the ten testing songs.</p>
 
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                              <th></th>
+                              <th>Chroma</th>
+                              <th>Tempo</th>
+                              <th>Timbre</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr>
+                                <td>Bohemian Rhapsody</td>
+                                <td>0.12</td>
+                                <td>0.22</td>
+                                <td>0.19</td>
+                            </tr>
+                            <tr>
+                                <td>Call Me Maybe</td>
+                                <td>0.53</td>
+                                <td>0.47</td>
+                                <td>0.66</td>
+                            </tr>
+                            <tr>
+                                <td>Come on Eileen</td>
+                                <td>0.28</td>
+                                <td>0.31</td>
+                                <td>0.38</td>
+                            </tr>
+                            <tr>
+                                <td>Firework</td>
+                                <td>0.35</td>
+                                <td>0.53</td>
+                                <td>0.53</td>
+                            </tr>
+                            <tr>
+                                <td>Happy Togther</td>
+                                <td>0.38</td>
+                                <td>0.38</td>
+                                <td>0.25</td>
+                            </tr>
+                            <tr>
+                                <td>Hotel California</td>
+                                <td>0.44</td>
+                                <td>0.14</td>
+                                <td>0.38</td>
+                            </tr>
+                            <tr>
+                                <td>Raspberry Beret</td>
+                                <td>0.36</td>
+                                <td>0.53</td>
+                                <td>0.50</td>
+                            </tr>
+                            <tr>
+                                <td>Rolling in the Deep</td>
+                                <td>0.47</td>
+                                <td>0.31</td>
+                                <td>0.43</td>
+                            </tr>
+                            <tr>
+                                <td>Titanium</td>
+                                <td>0.25</td>
+                                <td>0.33</td>
+                                <td>0.78</td>
+                            </tr>
+                            <tr>
+                                <td>When Doves Cry</td>
+                                <td>0.36</td>
+                                <td>0.20</td>
+                                <td>0.27</td>
+                            </tr>
+                            <tr class="bold-row">
+                                <td>Average</td>
+                                <td>0.35</td>
+                                <td>0.34</td>
+                                <td>0.44</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p class="figure-label">Table 1.</p>
+                    <p class="figure-text">Comparison of performance of Structify on testing dataset</p>
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="discussion">
+                    <p>We see that Structify works reasonably well. On “Call Me Maybe,” Structify correctly identified the start of the chorus each time it occurred, though it missed certain other segments (precision 0.71, recall 0.63). On a cover of “Titanium,” Structify generally segmented the song well, but occasionally halfway through the chorus (precision 0.71, recall 0.83). And on “Firework” by Katy Perry, the segmentations found were generally accurate, but it did not identify all of them, indicating that the algorithm parameters could be better tuned.</p>
+                    <p>Conversely, on “Bohemian Rhapsody,” Structify performed extremely poorly, having precision of 0.2 and recall of 0.25. This can be largely attributed to the failure of beat tracking due to tempo and style changes, since Structify depends on beat tracking to analyze similarity.</p>
+                    <p>Figure 3 shows the Structify segmentation of “Call Me Maybe” and includes the correct segmentation for comparison.</p>
 
+
+                    <img class="structify-output-image-resize3" src="{{ url_for('static', filename='structify-call-me-maybe.png') }}">
+                    <img class="structify-output-image-resize3" src="{{ url_for('static', filename='manual-call-me-maybe.png') }}">
+                    <p class="figure-label">Figure 3.</p>
+                    <p class="figure-text">Segmentations of “Call Me Maybe” using Structify (top) and manually (bottom)</p>
                 </div>
 
                 <div role="tabpanel" class="tab-pane" id="conclusion">
-
+                    <p>Structify showed extremely promising results on highly structured songs, as it was frequently able to identify correct segmentations, and rarely incorrectly segmented songs. However, when beat tracking failed, Structify did not at all work well, since the algorithm revolves around the similarity of beat-synchronous features. While song segmentation is a difficult task, Structify works well on a variety of pop songs.</p>
+                    <p>This project can be taken in several directions. The segmentation pipeline could likely be fine-tuned, including varying more parameters, refining beat tracking, or applying filters to the self-similarity matrix.  Other methods of segmentation could also be investigated, such as analysis with spectral clustering3. Finally, we originally wanted to label sections (as “intro,” “verse,” etc.), but decided that this was out of scope; this is yet another path forward.</p>
                 </div>
+            </div>
+
+            <div class="page-header">
+                <h2>Check out our demos and try it yourself:</h2>
             </div>
 
             <div class="panel panel-info">
