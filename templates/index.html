@@ -2,9 +2,28 @@
 <html>
     <head>
         <title>Structify</title>
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
     </head>
 
     <body>
-        <h1>WE ARE STRUCTIFUKQ</h1>
+        <h1>STRUCTIFY</h1>
+
+        <form id="file-upload" enctype="multipart/form-data">
+            <input type="file" name="audio">
+            <input type="submit" value="Structify!">
+        </form>
+
+        <script
+          src="https://code.jquery.com/jquery-3.2.0.min.js"
+          integrity="sha256-JAW99MJVpJBGcbzEuXk4Az05s/XyDdBomFqNlM3ic+I="
+          crossorigin="anonymous">
+        </script>
+        <script
+            src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous">
+        </script>
+        <script src="{{ url_for('static', filename='script.js') }}"></script>
     </body>
 </html>
