@@ -4,3 +4,8 @@
 audio/temp.wav
 static/segmented_*
 
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
