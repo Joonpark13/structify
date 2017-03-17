@@ -57,7 +57,9 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Fal
 
 
 def cost(i, j, sim):
-    return (1.0 / sim.shape[0]) * (np.sum(sim[i:j, i:j]) / 2.0)
+    cost = (1.0 / (j - i + 1)) * (np.sum(sim[i:j+1, i:j+1]) / 2.0)
+
+    return cost
 
 
 def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='cityblock', display=False):
@@ -98,30 +100,29 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='c
     bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
     
-    # Compute (and show for testing) similarity matrix)
+    # Compute beat synchronous similarity matrix
     sim = sim_matrix(bsf, sr, hop_len, distance_metric)
-    plt.show()
 
+    # Build directed graph to segment song
     DG = nx.DiGraph()
 
+    N = sim.shape[0]  # number of beats
+
     # Beat frames are nodes
-    DG.add_nodes_from(range(sim.shape[0]))
+    DG.add_nodes_from(range(N))
     assert len(DG.nodes()) == beats.size
 
-    # Add edges
-    for i in range(sim.shape[0] - 2):  # - 2 to account for j being i + 1 and
-                                        # we add edges between i and j + 1 (aka i and i + 2)
-        for j in range(i + 1, sim.shape[0] - 1):
-            if j - i == 1:
-                # librosa's recurrance matrix can't calculate distance for one feature vector
-                # But we know distance to itself is 0
-                cost_value = alpha
-            else:
-                cost_value = alpha + cost(i, j, sim)
+    # Edges are costs of segments between node i and node j
+    # If graph has N nodes, starts of paths should be 0, 1, ... , N - 2
+    for i in range(N - 1):
+        # For some i, ends of paths should be i+1, i+2, ... , N - 1
+        for j in range(i, N):
+            cost_value = alpha + cost(i, j, sim)
+            DG.add_edge(i, j, weight = cost_value)
 
             DG.add_edge(i, j + 1, weight=cost_value)
 
-    path = nx.dijkstra_path(DG, 0, sim.shape[0] - 1)
+    path = nx.dijkstra_path(DG, 0, N - 1)
 
     # Convert beat frames to time
     beat_frames = []
@@ -258,7 +259,7 @@ def main():
 
     hop_len = 1024
     alpha = 1.3
-    segments = segment(signal, sr, hop_len, alpha)
+    segments = segment(signal, sr, hop_len, alpha, distance_metric = 'euclidean')
     print 'Successfully segmented song at times:'
     print segments
 
