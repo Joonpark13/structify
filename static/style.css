@@ -1,5 +1,5 @@
 .tab-pane {
-    height: 300px;
+    height: 800px;
     padding: 10px;
     overflow: auto;
 }
@@ -16,4 +16,19 @@
 .structify-output-audio {
     display: block;
     margin: auto;
+}
+
+.structify-output-image-resize {
+    display: block;
+    margin: auto;
+    max-height: 300px;
+}
+
+.figure-label {
+    font-weight: bold;
+    text-align: center;
+}
+
+.figure-text {
+    text-align: center;
 }

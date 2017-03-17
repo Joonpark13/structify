@@ -1,8 +1,6 @@
 appdirs==1.4.2
 appnope==0.1.0
 audioread==2.1.4
-awscli==1.11.63
-awsebcli==3.10.0
 backports.shutil-get-terminal-size==1.0.0
 backports.ssl-match-hostname==3.5.0.1
 blessed==1.14.1

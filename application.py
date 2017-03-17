@@ -45,6 +45,5 @@ def file_upload():
         return 'upload'
 
 if __name__ == '__main__':
-    # http_server = WSGIServer(('', 5000), application)
-    # http_server.serve_forever()
-    application.run()
+    http_server = WSGIServer(('', 5000), application)
+    http_server.serve_forever()
