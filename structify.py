@@ -58,7 +58,6 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Fal
 
 def cost(i, j, sim):
     cost = (1.0 / (j - i + 1)) * (np.sum(sim[i:j+1, i:j+1]) / 2.0)
-
     return cost
 
 
@@ -82,8 +81,7 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='citybl
     sim = sp.spatial.distance.cdist(feature_vectors.T, feature_vectors.T, distance_metric)
     
     # Normalize by max distance
-    max_distance = np.amax(sim)
-    sim /= max_distance
+    sim /= np.amax(sim)
     
     if display:
         plt.imshow(sim)
@@ -116,11 +114,9 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='c
     # If graph has N nodes, starts of paths should be 0, 1, ... , N - 2
     for i in range(N - 1):
         # For some i, ends of paths should be i+1, i+2, ... , N - 1
-        for j in range(i, N):
-            cost_value = alpha + cost(i, j, sim)
+        for j in range(i + 1, N):
+            cost_value = alpha + cost(i, j - 1, sim)
             DG.add_edge(i, j, weight = cost_value)
-
-            DG.add_edge(i, j + 1, weight=cost_value)
 
     path = nx.dijkstra_path(DG, 0, N - 1)
 
@@ -128,6 +124,7 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='c
     beat_frames = []
     for index in path:
         beat_frames.append(beats[index])
+
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
 
@@ -244,8 +241,8 @@ def create_segmented_audio(signal, sr, segments, beep_signal, song_title):
     beep_len = len(beep_signal)
 
     # Add beep at start of every segment
-    for start_time in segments:
-        signal[start_time : start_time+beep_len] += beep_signal
+    for start in segments:
+        signal[start : start+beep_len] += beep_signal
 
     # Save to disk as new wav file
     fname = "audio/{0}_segmented.wav".format(song_title)
