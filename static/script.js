@@ -30,11 +30,11 @@ $('#file-upload').submit(function(event) {
             // Display image and audio file
             const image = document.createElement('img');
             $(image).attr('src', data.image);
-            $(image).attr('id', 'structify-output-image');
+            $(image).addClass('structify-output-image');
 
             const audio = document.createElement('audio');
             $(audio).attr('controls', 'controls');
-            $(audio).attr('id', 'structify-output-audio');
+            $(audio).addClass('structify-output-audio');
             const audio_source = document.createElement('source');
             $(audio_source).attr('src', data.audio);
             $(audio_source).attr('type', 'audio/wav');

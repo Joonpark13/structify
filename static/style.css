@@ -8,12 +8,12 @@
     margin-bottom: 10px;
 }
 
-#structify-output-image {
+.structify-output-image {
     display: block;
     margin: auto;
 }
 
-#structify-output-audio {
+.structify-output-audio {
     display: block;
     margin: auto;
 }

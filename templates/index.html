@@ -54,16 +54,34 @@
                 <h3 class="panel-title">Demo: Titanium</h3>
               </div>
               <div class="panel-body">
-                Panel content
+                  <img class="structify-output-image" src="{{ url_for('static', filename='segmented_signal_titanium.png') }}">
+                  <audio class="structify-output-audio" controls>
+                      <source src="{{ url_for('static', filename='titanium_segmented.wav') }}" type="audio/wav">
+                  </audio>
               </div>
+            </div>
+
+            <div class="panel panel-warning">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Demo: Firework</h3>
+                </div>
+                <div class="panel-body">
+                    <img class="structify-output-image" src="{{ url_for('static', filename='segmented_signal_firework.png') }}">
+                    <audio class="structify-output-audio" controls>
+                        <source src="{{ url_for('static', filename='firework_segmented.wav') }}" type="audio/wav">
+                    </audio>
+                </div>
             </div>
 
             <div class="panel panel-success">
               <div class="panel-heading">
-                <h3 class="panel-title">Demo: Call Me Maybe</h3>
+                <h3 class="panel-title">Demo: Bohemian Rhapsody</h3>
               </div>
               <div class="panel-body">
-                Panel content
+                <img class="structify-output-image" src="{{ url_for('static', filename='segmented_signal_bohemian_rhapsody.png') }}">
+                <audio class="structify-output-audio" controls>
+                    <source src="{{ url_for('static', filename='bohemian_rhapsody_segmented.wav') }}" type="audio/wav">
+                </audio>
               </div>
             </div>
 
