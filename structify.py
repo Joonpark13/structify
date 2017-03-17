@@ -183,6 +183,7 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
     alphax = 0.
 
     for alpha in test_alphas:
+        print "testing alpha ", alpha
         result_timestamps = segment(signal, sr, 1024, alpha, distance_metric=dist_measure, features=feature)
         f1, precision, recall = evaluate(correct_timestamps, result_timestamps, threshold)
         if (f1 > best_f1):
@@ -204,7 +205,8 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
     }
 
 def auto_test_distance(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0, 
-                       distances=['cityblock', 'cosine', 'correlation'], feature='mfcc'):
+                       distances=['cityblock'], feature='mfcc'):
+    print "testing distances"
     best_data = {
         'test_alphas': [],
         'best_dist': '',
@@ -225,7 +227,8 @@ def auto_test_distance(signal, sr, correct_timestamps, start_alpha, end_alpha, n
     return best_data
 
 def auto_test_features(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0, 
-                       distances=['cityblock', 'cosine', 'correlation'], features=['mfcc', 'chroma', 'tempo']):
+                       distances=['cityblock'], features=['mfcc', 'chroma', 'tempo']):
+    print "testing features"
     best_data = {
         'test_alphas': [],
         'test_dists': distances,
@@ -269,13 +272,31 @@ def main():
     alpha_mfcc = 0.
     alpha_chroma = 0.
     alpha_tempo = 0.
-    songs = ['audio/call_me_maybe.wav']
+    songs = ['audio/bohemian_rhapsody.wav',
+             'audio/call_me_maybe.wav',
+             'audio/come_on.wav',
+             'audio/firework.wav',
+             'audio/happy_together.wav',
+             'audio/hotel_california.wav',
+             'audio/raspberry_beret.wav',
+             'audio/rolling_in_the_deep.wav',
+             'audio/titanium.wav',
+             'audio/when_doves_cry.wav']
     correct_timestamps = {
-        'audio/call_me_maybe.wav': [.65, 3., 27., 60., 87., 136., 151., 183.]
+        'audio/bohemian_rhapsody.wav': [5., 60., 120., 163., 188., 252., 299., 354.],
+        'audio/call_me_maybe.wav': [.65, 3., 27., 60., 87., 136., 151., 183.],
+        'audio/come_on.wav': [0., 6., 45., 84., 102., 106., 146., 172., 212., 252.],
+        'audio/firework.wav': [6., 15., 45., 61., 92., 123., 139., 170., 185., 232.],
+        'audio/happy_together.wav': [1., 42., 56., 72., 88., 104., 122., 169.],
+        'audio/hotel_california.wav': [0., 52., 104., 182., 208., 260., 399.],
+        'audio/raspberry_beret.wav': [0., 8., 56., 80., 112., 136., 169., 213],
+        'audio/rolling_in_the_deep.wav': [0., 59., 78., 113., 150., 169., 188., 225.],
+        'audio/titanium.wav': [0., 32., 65., 99., 162., 203.],
+        'audio/when_doves_cry.wav': [1., 19., 34., 65., 95., 110., 155., 171., 202., 216., 225.]
     }
     for song in songs:
         signal, sr = librosa.load(song)
-        test_data, extra_data = auto_test_features(signal, sr, correct_timestamps[song], 1.5, 6.0, 3)
+        test_data, extra_data = auto_test_features(signal, sr, correct_timestamps[song], 0.5, 2.0, 5)
         print 'For the song ', song
         print 'The best feature out of {0} is {1}'.format(test_data['test_features'], test_data['best_feature'])
         print 'For which the best distance metric out of {0} is {1}'.format(test_data['test_dists'], test_data['best_dist'])
