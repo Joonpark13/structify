@@ -86,7 +86,7 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='citybl
     if display:
         plt.imshow(sim)
         plt.colorbar()
-        plt.title('Similarity Matrix - {0}'.format(distance_metric))
+        plt.show()
 
     return sim
 
