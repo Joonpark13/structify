@@ -1,5 +1,2 @@
-# Images
-*.png
 *.pyc
 audio/temp.wav
-static/segmented_*
