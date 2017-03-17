@@ -1,2 +1,5 @@
 # Images
 *.png
+*.pyc
+static/temp.wav
+
