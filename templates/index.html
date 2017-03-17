@@ -4,17 +4,86 @@
         <title>Structify</title>
 
         <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     </head>
 
     <body>
-        <h1>STRUCTIFY</h1>
+        <div class="container">
+            <div class="jumbotron">
+                <h1>Structify</h1>
+                <p>Automatic segmentation of pop songs</p>
+            </div>
 
-        <form id="file-upload" enctype="multipart/form-data">
-            <input type="file" name="audio">
-            <input type="submit" value="Structify!">
-        </form>
+            <ul class="nav nav-pills">
+                <li role="presentation" class="active"><a href="#abstract" role="tab" data-toggle="tab">Abstract</a></li>
+                <li role="presentation"><a href="#music" role="tab" data-toggle="tab">Music Representation</a></li>
+                <li role="presentation"><a href="#methods" role="tab" data-toggle="tab">Methods</a></li>
+                <li role="presentation"><a href="#results" role="tab" data-toggle="tab">Results</a></li>
+                <li role="presentation"><a href="#discussion" role="tab" data-toggle="tab">Discussion</a></li>
+                <li role="presentation"><a href="#conclusion" role="tab" data-toggle="tab">Conclusion</a></li>
+            </ul>
 
-        <div id="results">
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="abstract">
+                    <p>Lorem</p>
+                </div>
+
+                <div role="tabpanel" class="tab-pane" id="music">
+                    <p>Ipsum</p>
+                </div>
+
+                <div role="tabpanel" class="tab-pane" id="methods">
+
+                </div>
+
+                <div role="tabpanel" class="tab-pane" id="results">
+
+                </div>
+
+                <div role="tabpanel" class="tab-pane" id="discussion">
+
+                </div>
+
+                <div role="tabpanel" class="tab-pane" id="conclusion">
+
+                </div>
+            </div>
+
+            <div class="panel panel-info">
+              <div class="panel-heading">
+                <h3 class="panel-title">Demo: Titanium</h3>
+              </div>
+              <div class="panel-body">
+                Panel content
+              </div>
+            </div>
+
+            <div class="panel panel-success">
+              <div class="panel-heading">
+                <h3 class="panel-title">Demo: Call Me Maybe</h3>
+              </div>
+              <div class="panel-body">
+                Panel content
+              </div>
+            </div>
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Structify - Try it out!</h3>
+                </div>
+
+                <div class="panel-body">
+                    <p>Give structify a shot by uploading a song of your choice. File must be .wav.</p>
+
+                    <form id="file-upload" enctype="multipart/form-data">
+                        <input type="file" name="audio">
+                        <br>
+                        <button id="submit" type="submit" class="btn btn-primary">Structify!</button>
+                    </form>
+
+                    <div id="structify-output"></div>
+                </div>
+            </div>
         </div>
 
         <script

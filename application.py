@@ -4,16 +4,16 @@ import os
 import librosa
 from structify import segment, plot_segmented_signal, create_segmented_audio
 
-app = Flask(__name__)
+application = Flask(__name__)
 
 def is_wav(filename):
     return '.' in filename and filename.split('.')[-1] == 'wav'
 
-@app.route('/')
+@application.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/upload', methods=['GET', 'POST'])
+@application.route('/upload', methods=['GET', 'POST'])
 def file_upload():
     if request.method == 'POST':
     	# check if the post request has the file part
@@ -45,5 +45,6 @@ def file_upload():
         return 'upload'
 
 if __name__ == '__main__':
-    http_server = WSGIServer(('', 5000), app)
-    http_server.serve_forever()
+    # http_server = WSGIServer(('', 5000), application)
+    # http_server.serve_forever()
+    application.run()

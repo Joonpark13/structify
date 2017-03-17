@@ -1,0 +1,19 @@
+.tab-pane {
+    height: 300px;
+    padding: 10px;
+    overflow: auto;
+}
+
+#submit {
+    margin-bottom: 10px;
+}
+
+#structify-output-image {
+    display: block;
+    margin: auto;
+}
+
+#structify-output-audio {
+    display: block;
+    margin: auto;
+}
