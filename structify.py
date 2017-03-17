@@ -252,7 +252,7 @@ def create_segmented_audio(signal, sr, segments, beep_signal, song_title):
 
 
 def main():
-    song = 'audio/call_me_maybe.wav'
+    song = 'audio/titanium.wav'
     signal, sr = librosa.load(song)
     print 'Loaded song from {0}.'.format(song)
 
