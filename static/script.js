@@ -1,7 +1,7 @@
 $('#file-upload').submit(function(event) {
     event.preventDefault();
 
-    $('#results').html(`
+    $('#structify-output').html(`
         <div class="progress">
             <div
                 class="progress-bar progress-bar-striped active"
@@ -25,20 +25,22 @@ $('#file-upload').submit(function(event) {
         contentType: false,
         processData: false,
         success: function(data) {
-            $('#results').empty();
+            $('#structify-output').empty();
 
             // Display image and audio file
             const image = document.createElement('img');
             $(image).attr('src', data.image);
+            $(image).attr('id', 'structify-output-image');
 
             const audio = document.createElement('audio');
             $(audio).attr('controls', 'controls');
+            $(audio).attr('id', 'structify-output-audio');
             const audio_source = document.createElement('source');
             $(audio_source).attr('src', data.audio);
             $(audio_source).attr('type', 'audio/wav');
             $(audio).append(audio_source);
 
-            $('#results').append(image, audio);
+            $('#structify-output').append(image, audio);
             $('#submit').prop('disabled', false);
         }
     });
