@@ -130,55 +130,65 @@ def segment(signal, sr, hop_len, alpha, aggregator=np.median):
         beat_frames.append(beats[index])
     return librosa.frames_to_time(beat_frames, sr=sr, hop_length=hop_len)
 
+def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
+    # threshold refers to the max difference (in absolute value seconds) a
+    # returned timestamp can have from our estimated correct timestamp to be
+    # considered accurate
+
+    current_timestamps = correct_timestamps
+    total = 0.0
+    hits = 0
+    misses = 0
+    i = 0
+    while i < len(result_timestamps) and len(current_timestamps) > 0:
+        index, val = min(
+            enumerate(current_timestamps),
+            key=lambda x: abs(x[1] - result_timestamps[i])
+        )
+        diff = abs(val - result_timestamps[i])
+            
+        if diff < threshold:
+            total += 1
+            hits += 1
+            current_timestamps = np.delete(current_timestamps, index)
+        else:
+            total -= 0.5
+            misses += 1
+
+        i += 1
+
+    return max((total / len(correct_timestamps)), 0), hits, misses
+
 def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0):
-    # threshold refers to the max difference (in absolute value) a returned timestamp can have from our estimated correct timestamp to be considered accurate
+    # threshold refers to the max difference (in absolute value seconds) a
+    # returned timestamp can have from our estimated correct timestamp to be
+    # considered accurate
+
     best_alpha = start_alpha
     best_eval = 0
     best_hits = 0
     best_misses = 0
+    best_timestamps = []
     test_alphas = np.linspace(start_alpha, end_alpha, num=num_samples)
 
     for alpha in test_alphas:
         result_timestamps = segment(signal, sr, 1024, alpha)
-        eval, hits, misses = evaluate(correct_timestamps, result_timestamps, threshold)
-        if (eval > best_eval):
-            best_eval = eval
+        value, hits, misses = evaluate(correct_timestamps, result_timestamps, threshold)
+        if (value > best_eval):
+            best_eval = value
             best_alpha = alpha
             best_hits = hits
             best_misses = misses
             best_timestamps = result_timestamps
 
-    return test_alphas, best_eval, best_alpha, best_timestamps, best_hits, best_misses
-
-def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
-    current_timestamps = correct_timestamps
-    eval = 0.
-    hits = 0
-    misses = 0
-    i = 0
-    while ((i < len(result_timestamps)) and (len(current_timestamps) > 0)):
-        index, diff = best_fit(current_timestamps, result_timestamps[i])
-            
-        if diff < threshold:
-            eval += 1
-            hits += 1
-            current_timestamps = np.delete(current_timestamps, index)
-        else:
-            eval -= 0.5
-            misses += 1
-
-        i += 1
-    return max((eval / len(correct_timestamps)), 0), hits, misses
-
-def best_fit(correct_timestamps, sample_timestamp):
-    min_diff = np.inf
-    for i in range(len(correct_timestamps)):
-        diff = np.abs(correct_timestamps[i] - sample_timestamp)
-        if diff < min_diff:
-            min_diff = diff
-            index = i
-            best_diff = diff
-    return index, best_diff
+    return {
+        'test_alphas': test_alphas,
+        'best_eval':  best_eval,
+        'best_alpha': best_alpha,
+        'best_timestamps': best_timestamps,
+        'best_hits': best_hits,
+        'best_misses': best_misses
+    }
 
 # call me maybe approximate:
 # .65, 3, 27, 60, 87, 136, 151, 183
@@ -186,11 +196,16 @@ def best_fit(correct_timestamps, sample_timestamp):
 def main():
     correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
     signal, sr = librosa.load('audio/call_me_maybe.wav')
-    tested_alphas, evaluation, best_alpha, best_timestamps, best_hits, best_misses = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
-    print 'The best alpha value out of ', tested_alphas, ' is ', best_alpha
-    print 'It gives a performance evaluation of ', evaluation, ', correctly finding ', best_hits, ' out of ', len(correct_timestamps), ' timestamps with ', best_misses, ' false positives'
-    print 'Our timestamps: ', correct_timestamps
-    print 'Best returned timestamps: ', best_timestamps
+    test_data = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
+    print 'The best alpha value out of {0} is {1}'.format(test_data['test_alphas'], test_data['best_alpha'])
+    print 'It gives a performance evaluation of {0}, correctly finding {1} out of {2} timestamps with {3} false positives'.format(
+        test_data['best_eval'],
+        test_data['best_hits'],
+        len(correct_timestamps),
+        test_data['best_misses']
+    )
+    print 'Our timestamps: {0}'.format(correct_timestamps)
+    print 'Best returned timestamps: {0}'.format(test_data['best_timestamps'])
 
 if __name__ == "__main__":
     main()
