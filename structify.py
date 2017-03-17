@@ -193,6 +193,19 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
 
 
 def plot_segmented_signal(signal, sr, segments, song_title):
+    """Plot audio signal with lines representing segmentations.
+
+        input:
+            signal: audio signal of segmented song (1D numpy array)
+            sr: sample rate
+            segments: 1D numpy array denoting the segment boundaries
+            song_title: name of song
+        
+        output:
+            None, but saves image to disk.
+    """
+
+
     times = librosa.samples_to_time(range(len(signal)), sr=sr)
 
     plt.figure(figsize=(10, 4))
