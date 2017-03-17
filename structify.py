@@ -92,11 +92,19 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='citybl
     return sim
 
 
-def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='cityblock'):
-    mfcc = librosa.feature.mfcc(signal, sr)
+def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='cityblock', features='mfcc'):
+    if features == 'mfcc':
+        features = librosa.feature.mfcc(signal, sr)
+    elif features == 'chroma':
+        features = librosa.feature.chroma_stft(signal, sr)
+    elif features == 'tempo':
+        features = librosa.feature.tempogram(signal, sr)
+    else:
+        raise Exception('Segment not called with valid distance measure')
+
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
         
-    bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
+    bsf = beat_sync_features(features, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
     
     # Compute (and show for testing) similarity matrix)
@@ -136,9 +144,10 @@ def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
     # considered accurate
 
     current_timestamps = correct_timestamps
-    total = 0.0
-    hits = 0
-    misses = 0
+    precision = 0.
+    recall = 0.
+    f1 = 0.
+    hits = 0.
     i = 0
     while i < len(result_timestamps) and len(current_timestamps) > 0:
         index, val = min(
@@ -148,63 +157,173 @@ def evaluate(correct_timestamps, result_timestamps, threshold=2.0):
         diff = abs(val - result_timestamps[i])
             
         if diff < threshold:
-            total += 1
             hits += 1
             current_timestamps = np.delete(current_timestamps, index)
-        else:
-            total -= 0.5
-            misses += 1
 
         i += 1
+        precision = hits / len(result_timestamps)
+        recall = hits / len(correct_timestamps)
+        if (precision + recall) != 0:
+            f1 = 2 * (precision * recall) / (precision + recall)
 
-    return max((total / len(correct_timestamps)), 0), hits, misses
+    return f1, precision, recall
 
-def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0):
+def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0, 
+                    dist_measure='cityblock', feature='mfcc'):
     # threshold refers to the max difference (in absolute value seconds) a
     # returned timestamp can have from our estimated correct timestamp to be
     # considered accurate
 
     best_alpha = start_alpha
-    best_eval = 0
-    best_hits = 0
-    best_misses = 0
+    best_f1 = 0.
+    best_precision = 0.
+    best_recall = 0.
     best_timestamps = []
     test_alphas = np.linspace(start_alpha, end_alpha, num=num_samples)
+    alphax = 0.
 
     for alpha in test_alphas:
-        result_timestamps = segment(signal, sr, 1024, alpha)
-        value, hits, misses = evaluate(correct_timestamps, result_timestamps, threshold)
-        if (value > best_eval):
-            best_eval = value
+        result_timestamps = segment(signal, sr, 1024, alpha, distance_metric=dist_measure, features=feature)
+        f1, precision, recall = evaluate(correct_timestamps, result_timestamps, threshold)
+        if (f1 > best_f1):
+            best_f1 = f1
             best_alpha = alpha
-            best_hits = hits
-            best_misses = misses
+            best_precision = precision
+            best_recall = recall
             best_timestamps = result_timestamps
+            alphax = alpha
 
     return {
         'test_alphas': test_alphas,
-        'best_eval':  best_eval,
+        'best_f1':  best_f1,
         'best_alpha': best_alpha,
         'best_timestamps': best_timestamps,
-        'best_hits': best_hits,
-        'best_misses': best_misses
+        'best_precision': best_precision,
+        'best_recall': best_recall,
+        'alpha': alphax
     }
 
+def auto_test_distance(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0, 
+                       distances=['cityblock', 'cosine', 'correlation'], feature='mfcc'):
+    best_data = {
+        'test_alphas': [],
+        'best_dist': '',
+        'best_f1':  0,
+        'best_alpha': 0,
+        'best_timestamps': [],
+        'best_precision': 0,
+        'best_recall': 0,
+        'alpha': 0.
+    }
+    for dist_measure in distances:
+        test_data = auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold, dist_measure, feature)
+        if test_data['best_f1'] > best_data['best_f1']:
+            best_data = test_data
+            best_data['best_dist'] = dist_measure
+            best_data['alpha'] = test_data['alpha']
+    best_data['test_dists'] = distances
+    return best_data
+
+def auto_test_features(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold=2.0, 
+                       distances=['cityblock', 'cosine', 'correlation'], features=['mfcc', 'chroma', 'tempo']):
+    best_data = {
+        'test_alphas': [],
+        'test_dists': distances,
+        'best_dist': '',
+        'best_feature': '',
+        'best_f1':  0,
+        'best_alpha': 0,
+        'best_timestamps': [],
+        'best_precision': 0,
+        'best_recall': 0
+    }
+    extra_data = {
+        'f1_mfcc': 0.,
+        'f1_chroma': 0.,
+        'f1_tempo': 0.,
+        'alpha_mfcc': 0.,
+        'alpha_chroma': 0.,
+        'alpha_tempo': 0.
+    }
+    for feature in features:
+        test_data = auto_test_distance(signal, sr, correct_timestamps, start_alpha, end_alpha, num_samples, threshold, distances, feature)
+        if test_data['best_f1'] > best_data['best_f1']:
+            best_data = test_data
+            best_data['best_feature'] = feature
+        if feature == 'mfcc' and test_data['best_f1'] > extra_data['f1_mfcc']:
+            extra_data['f1_mfcc'] = test_data['best_f1']
+            extra_data['alpha_mfcc'] = test_data['alpha']
+        if feature == 'chroma' and test_data['best_f1'] > extra_data['f1_chroma']:
+            extra_data['f1_chroma'] = test_data['best_f1']
+            extra_data['alpha_chroma'] = test_data['alpha']
+        if feature == 'tempo' and test_data['best_f1'] > extra_data['f1_tempo']:
+            extra_data['f1_tempo'] = test_data['best_f1']
+            extra_data['alpha_tempo'] = test_data['alpha']
+    best_data['test_features'] = features
+    return best_data, extra_data
+
 def main():
-    # call me maybe approximate:
-    # .65, 3, 27, 60, 87, 136, 151, 183
-    correct_timestamps = [.65, 3., 27., 60., 87., 136., 151., 183.]
-    signal, sr = librosa.load('audio/call_me_maybe.wav')
-    test_data = auto_test_alpha(signal, sr, correct_timestamps, 1.2, 2.0, 9)
-    print 'The best alpha value out of {0} is {1}'.format(test_data['test_alphas'], test_data['best_alpha'])
-    print 'It gives a performance evaluation of {0}, correctly finding {1} out of {2} timestamps with {3} false positives'.format(
-        test_data['best_eval'],
-        test_data['best_hits'],
-        len(correct_timestamps),
-        test_data['best_misses']
+    f1_mfcc = 0.
+    f1_chroma = 0.
+    f1_tempo = 0.
+    alpha_mfcc = 0.
+    alpha_chroma = 0.
+    alpha_tempo = 0.
+    songs = ['audio/call_me_maybe.wav']
+    correct_timestamps = {
+        'audio/call_me_maybe.wav': [.65, 3., 27., 60., 87., 136., 151., 183.]
+    }
+    for song in songs:
+        signal, sr = librosa.load(song)
+        test_data, extra_data = auto_test_features(signal, sr, correct_timestamps[song], 1.5, 6.0, 3)
+        print 'For the song ', song
+        print 'The best feature out of {0} is {1}'.format(test_data['test_features'], test_data['best_feature'])
+        print 'For which the best distance metric out of {0} is {1}'.format(test_data['test_dists'], test_data['best_dist'])
+        print 'For which the best alpha value out of {0} is {1}'.format(test_data['test_alphas'], test_data['best_alpha'])
+        print 'It gives an F1 of {0}, with a precision of {1} and recall of {2}'.format(
+            test_data['best_f1'],
+            test_data['best_precision'],
+            test_data['best_recall']
+        )
+        print 'Our timestamps: {0}'.format(correct_timestamps)
+        print 'Best returned timestamps: {0}'.format(test_data['best_timestamps'])
+        print 'The best F1 of MFCC is {0}, alpha of {1}'.format(
+            extra_data['f1_mfcc'],
+            extra_data['alpha_mfcc']
+        )
+        f1_mfcc += extra_data['f1_mfcc']
+        alpha_mfcc += extra_data['alpha_mfcc']
+        print 'The best F1 of Chroma is {0}, alpha of {1}'.format(
+            extra_data['f1_chroma'],
+            extra_data['alpha_chroma']
+        )
+        f1_chroma += extra_data['f1_chroma']
+        alpha_chroma += extra_data['alpha_chroma']
+        print 'The best F1 of Tempo is {0}, alpha of {1} \n \n'.format(
+            extra_data['f1_tempo'],
+            extra_data['alpha_tempo']
+        )
+        f1_tempo += extra_data['f1_tempo']
+        alpha_tempo += extra_data['alpha_tempo']
+
+    f1_mfcc /= len(songs)
+    f1_chroma /= len(songs)
+    f1_tempo /= len(songs)
+    alpha_mfcc /= len(songs)
+    alpha_chroma /= len(songs)
+    alpha_tempo /= len(songs)
+    print 'Average F1 for MFCC is {0}, recommended alpha is {1}'.format(
+        f1_mfcc,
+        alpha_mfcc
     )
-    print 'Our timestamps: {0}'.format(correct_timestamps)
-    print 'Best returned timestamps: {0}'.format(test_data['best_timestamps'])
+    print 'Average F1 for Chroma is {0}, recommended alpha is {1}'.format(
+        f1_chroma,
+        alpha_chroma
+    )
+    print 'Average F1 for Tempo is {0}, recommended alpha is {1}'.format(
+        f1_tempo,
+        alpha_tempo
+    )
 
 if __name__ == "__main__":
     main()
