@@ -15,6 +15,7 @@ def beat_track(music, sr, hop_length):
         output:
             beats: a list of all the frame indices found by the beat tracker
     """
+
     tempo, beats = librosa.beat.beat_track(music, sr=sr, hop_length=hop_length)
     return beats
 
@@ -33,10 +34,8 @@ def beat_sync_features(feature_vectors, beats, aggregator=np.median, display=Fal
             vector.
     """
     
-    # Find boundaries of the samples that make up each beat. Calculate halfway mark between each beat, which will
-    # represent the boundaries of all beats except the first and the last. Prepend 0, and append the last sample,
-    # so that we then have boundaries for every beat.
-    beat_boundaries = [0] + beats # [(beats[i] + beats[i+1]) / 2 for i in range(len(beats) - 1)] + [beats[-1]]
+    # Prepend 0 to beat_boundaries to account for first beat
+    beat_boundaries = [0] + beats
     
     beat_synced_features = np.zeros((feature_vectors.shape[0], beats.size))
     
@@ -193,13 +192,14 @@ def auto_test_alpha(signal, sr, correct_timestamps, start_alpha, end_alpha, num_
     }
 
 
-def plot_segmented_signal(signal, sr, hop_len, segment_times, song_title):
+def plot_segmented_signal(signal, sr, segments, song_title):
     times = librosa.samples_to_time(range(len(signal)), sr=sr)
 
     plt.figure(figsize=(10, 4))
 
     plt.plot(times, signal, color='b')
-    for timestamp in segment_times:
+
+    for timestamp in segments:
         plt.axvline(timestamp, color='r')
 
     plt.title(song_title)
@@ -207,15 +207,58 @@ def plot_segmented_signal(signal, sr, hop_len, segment_times, song_title):
     plt.savefig('segmented_signal.png')
 
 
+def create_segmented_audio(signal, sr, segments, beep_signal, song_title):
+    """Add beeps to audio signal to represent segmentations.
+
+        input:
+            signal: audio signal of segmented song (1D numpy array)
+            sr: sample rate
+            segments: 1D numpy array denoting the segment boundaries
+            beep_signal: audio signal of beep (1D numpy array)
+            song_title: name of song
+
+        output:
+            None, but saves audio file to disk
+    """
+
+    # Times to add beeps
+    segments = librosa.time_to_samples(segments, sr = sr)
+
+    # Make signal softer and shorter
+    beep_signal /= 2.0
+    beep_signal = beep_signal[ : len(beep_signal) / 2]
+    beep_len = len(beep_signal)
+
+    # Add beep at start of every segment
+    for start_time in segments:
+        signal[start_time : start_time+beep_len] += beep_signal
+
+    # Save to disk as new wav file
+    fname = "audio/{0}_segmented.wav".format(song_title)
+    librosa.output.write_wav(fname, signal, sr)
+
+
 def main():
     song = 'audio/call_me_maybe.wav'
     signal, sr = librosa.load(song)
+    print 'Loaded song from {0}.'.format(song)
+
     hop_len = 1024
     alpha = 1.3
     segments = segment(signal, sr, hop_len, alpha)
+    print 'Successfully segmented song at times:'
+    print segments
 
-    song_title = song[6:-4]  # song begins with "audio/" and ends with ".wav"
-    plot_segmented_signal(signal, sr, hop_len, segments, song_title)
+    # Create output image showing segmentations
+    song_title = song[6:-4]  # song begins with 'audio/' and ends with '.wav'
+    plot_segmented_signal(signal, sr, segments, song_title)
+    print 'Generated image of segmented audio signal.'
+
+    # Create output audio with beeps denoting segmentations
+    beep, _ = librosa.load('audio/beep.wav')
+    create_segmented_audio(signal, sr, segments, beep, song_title)
+    print 'Generated segmented audio in audio/' + song_title + '_segmented.wav.'
+
 
 if __name__ == "__main__":
     main()
