@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 import scipy as sp
+from datetime import datetime
+
 
 def beat_track(music, sr, hop_length):
     """
@@ -94,13 +96,12 @@ def sim_matrix(feature_vectors, sample_rate, hop_length, distance_metric='citybl
 def segment(signal, sr, hop_len, alpha, aggregator=np.median, distance_metric='cityblock'):
     mfcc = librosa.feature.mfcc(signal, sr)
     tempo, beats = librosa.beat.beat_track(signal, sr=sr, hop_length=hop_len)
-        
+
     bsf = beat_sync_features(mfcc, beats, aggregator, display=False)
     assert beats.size == bsf.shape[1]
-    
+
     # Compute (and show for testing) similarity matrix)
     sim = sim_matrix(bsf, sr, hop_len, distance_metric)
-    plt.show()
 
     DG = nx.DiGraph()
 
@@ -217,10 +218,13 @@ def plot_segmented_signal(signal, sr, segments, song_title):
 
     plt.title(song_title)
     plt.xlabel('Time (s)')
-    plt.savefig('segmented_signal.png')
+    filename = 'static/segmented_signal_{0}.png'.format(datetime.now())
+    plt.savefig(filename)
+
+    return filename
 
 
-def create_segmented_audio(signal, sr, segments, beep_signal, song_title):
+def create_segmented_audio(signal, sr, segments, beep_signal, song_title=None):
     """Add beeps to audio signal to represent segmentations.
 
         input:
@@ -246,9 +250,15 @@ def create_segmented_audio(signal, sr, segments, beep_signal, song_title):
     for start_time in segments:
         signal[start_time : start_time+beep_len] += beep_signal
 
-    # Save to disk as new wav file
-    fname = "audio/{0}_segmented.wav".format(song_title)
+    if song_title:
+        # Save to disk as new wav file
+        fname = "audio/{0}_segmented.wav".format(song_title)
+    else:
+        # For web uses
+        fname = 'static/segmented_{0}.wav'.format(datetime.now())
     librosa.output.write_wav(fname, signal, sr)
+
+    return fname
 
 
 def main():
@@ -275,4 +285,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
